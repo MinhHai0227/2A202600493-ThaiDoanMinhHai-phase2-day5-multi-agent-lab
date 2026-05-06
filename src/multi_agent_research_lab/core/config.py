@@ -19,9 +19,22 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    openai_input_cost_per_1m_tokens: float = Field(
+        default=0.15,
+        ge=0,
+        validation_alias="OPENAI_INPUT_COST_PER_1M_TOKENS",
+    )
+    openai_output_cost_per_1m_tokens: float = Field(
+        default=0.60,
+        ge=0,
+        validation_alias="OPENAI_OUTPUT_COST_PER_1M_TOKENS",
+    )
 
     langsmith_api_key: str | None = Field(default=None, validation_alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field(default="multi-agent-research-lab", validation_alias="LANGSMITH_PROJECT")
+    langfuse_public_key: str | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key: str | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
+    langfuse_host: str = Field(default="https://cloud.langfuse.com", validation_alias="LANGFUSE_HOST")
 
     tavily_api_key: str | None = Field(default=None, validation_alias="TAVILY_API_KEY")
 

@@ -2,76 +2,73 @@
 
 ## Scenario
 
-Bạn cần xây dựng một research assistant có thể nhận câu hỏi dài, tìm thông tin, phân tích và viết câu trả lời cuối cùng. Lab yêu cầu so sánh hai cách làm:
+The project implements a research assistant that can answer long-form questions by
+splitting work across multiple agents:
 
-1. **Single-agent baseline**: một agent làm toàn bộ.
-2. **Multi-agent workflow**: Supervisor điều phối Researcher, Analyst, Writer.
+1. `baseline`: one model answers the whole query directly.
+2. `multi-agent`: a supervisor coordinates researcher, analyst, writer, and critic.
 
-## Quy tắc quan trọng
+## Current implementation
 
-- Không thêm agent nếu không có lý do rõ ràng.
-- Mỗi agent phải có responsibility riêng.
-- Shared state phải đủ rõ để debug.
-- Phải có trace hoặc log cho từng bước.
-- Phải benchmark, không chỉ nhìn output bằng cảm tính.
-
-## Milestone 1: Baseline
-
-File gợi ý:
+### Baseline
 
 - `src/multi_agent_research_lab/cli.py`
 - `src/multi_agent_research_lab/services/llm_client.py`
 
-TODO(student): thay baseline placeholder bằng một call LLM thật.
+The baseline performs a real LLM call when `OPENAI_API_KEY` is available and falls
+back to an offline summarizer if the provider is unavailable.
 
-## Milestone 2: Supervisor
-
-File gợi ý:
+### Supervisor
 
 - `src/multi_agent_research_lab/agents/supervisor.py`
 - `src/multi_agent_research_lab/graph/workflow.py`
 
-TODO(student): implement routing policy.
+Routing policy:
 
-Gợi ý câu hỏi thiết kế:
+- call `researcher` when sources or research notes are missing
+- call `analyst` when analysis notes are missing
+- call `writer` when the final answer is missing
+- call `critic` when review notes are missing
+- stop when all required outputs exist or max iterations is reached
 
-- Khi nào gọi Researcher?
-- Khi nào gọi Analyst?
-- Khi nào gọi Writer?
-- Khi nào stop?
-- Nếu agent fail thì retry hay fallback?
+### Worker agents
 
-## Milestone 3: Worker agents
+- `agents/researcher.py`: retrieves sources and builds research notes
+- `agents/analyst.py`: extracts findings, limits, and recommendations
+- `agents/writer.py`: writes the final answer
+- `agents/critic.py`: records likely quality risks and unsupported claims
 
-File gợi ý:
-
-- `agents/researcher.py`
-- `agents/analyst.py`
-- `agents/writer.py`
-
-TODO(student): implement từng worker.
-
-## Milestone 4: Trace và benchmark
-
-File gợi ý:
+### Trace and benchmark
 
 - `observability/tracing.py`
 - `evaluation/benchmark.py`
 - `evaluation/report.py`
 
-Benchmark tối thiểu:
+The project records local JSON-friendly trace spans and exports benchmark artifacts.
+If LangSmith or Langfuse keys are configured, the trace metadata marks the intended
+provider even when local JSON export is used as the storage fallback.
 
-| Metric | Cách đo gợi ý |
+## Minimum benchmark metrics
+
+| Metric | How it is measured now |
 |---|---|
-| Latency | wall-clock time |
-| Cost | token usage hoặc provider usage |
-| Quality | rubric 0-10 do peer review |
-| Citation coverage | số claims có source / tổng claims chính |
-| Failure rate | số query fail / tổng query |
+| Latency | Wall-clock runtime |
+| Cost | Estimated from token counts and configurable per-million token prices |
+| Quality | Heuristic 0-10 score plus manual peer review recommendation |
+| Citation coverage | Estimated from source mentions and citation markers |
+| Failure rate | `1.0` when errors are recorded, otherwise `0.0` |
+
+## Commands
+
+```bash
+venv\Scripts\python -m multi_agent_research_lab.cli baseline --query "Explain multi-agent systems"
+venv\Scripts\python -m multi_agent_research_lab.cli multi-agent --query "Explain multi-agent systems"
+venv\Scripts\python -m multi_agent_research_lab.cli benchmark --query "Explain multi-agent systems"
+```
 
 ## Exit ticket
 
-Mỗi nhóm trả lời 2 câu:
-
-1. Case nào nên dùng multi-agent? Vì sao?
-2. Case nào không nên dùng multi-agent? Vì sao?
+1. Use multi-agent systems when the task benefits from decomposition, source-aware
+   reasoning, or auditability across multiple steps.
+2. Avoid multi-agent systems for short factual prompts where a single fast model is
+   cheaper, simpler, and easier to maintain.
